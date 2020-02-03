@@ -1,8 +1,11 @@
+/* eslint-disable no-console */
+/* eslint-disable no-unused-vars */
 require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const helmet = require('helmet');
+const winston = require('winston');
 const { NODE_ENV } = require('../config');
 
 const app = express();
@@ -13,18 +16,31 @@ app.use(morgan(morganOption));
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-app.use((error, req, res, next) => {
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.File({ filename: 'info.log' }),
+  ],
+});
+if (NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple(),
+  }));
+}
+app.use((error, _req, res, _next) => {
+  let response;
   if (NODE_ENV === 'production') {
     response = {
       error: {
-        message: 'server error'
-      }
+        message: 'server error',
+      },
     };
-  }
-  else {
+  } else {
     console.log(error);
     response = { message: error.message, error };
   }
+  res.status(500).send(response);
 });
 
 app.get('/', (req, res) => {
@@ -37,7 +53,9 @@ app.post('/', (req, res) => {
 });
 
 app.post('/user', (req, res) => {
-  const { username, password, favoriteClub, newsLetter } = req.body;
+  const {
+    username, password, favoriteClub, newsLetter,
+  } = req.body;
 });
 
 module.exports = app;
